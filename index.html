@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Chat Socket.IO UNA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#fafafa; }
+      form { background: #000; padding: 6px; position: fixed; bottom: 0; width: 100%; display:flex; gap:6px; }
+      form input { border: 0; padding: 10px; }
+      form button { flex: 0 0 auto; width: 10%; background: rgb(130, 224, 255);  border: none; padding: 10px; cursor:pointer; }
+      #messages { list-style-type: none; margin: 0; padding: 12px; }
+      #messages li { padding: 10px 12px; background:#fff; border-radius:12px; margin-bottom:10px; box-shadow:0 1px 2px rgba(0,0,0,.06); }
+      #messages li .meta { display:block; margin-bottom:6px; }
+      #messages { margin-bottom: 60px }
+      #m { flex: 1 1 auto; margin-right: 4px; }
+      #nombre { flex: 0 0 20%; min-width: 160px; }
+      img.embedded { max-width: 400px; max-height: 400px; display:block; border-radius:10px; }
+      iframe.yt { width: 560px; max-width: 100%; height: 315px; border:0; border-radius:10px; }
+      .text { white-space: pre-wrap; word-break: break-word; }
+    </style>
+  </head>
+  <body>
+    <ul id="messages"></ul>
+    <form action="">
+      <input id="nombre" autocomplete="off" placeholder="Username"/>
+      <input id="m" autocomplete="off" placeholder="Escriba un mensaje" />
+      <button type="submit">Send</button>
+    </form>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      // color aleatorio por usuario
+      var colorHexTxt = "";
+      function getRandomColor() {
+        var letters = '0123456789ABCDEF';
+        var color = '#';
+        for (var i = 0; i < 6; i++) color += letters[Math.floor(Math.random() * 16)];
+        return color;
+      }
+
+      function buildYouTubeEmbed(yt) {
+        // yt: {id, list, start}
+        var base = "https://www.youtube.com/embed/";
+        var src = "";
+        var params = [];
+        if (yt && yt.id) {
+          src = base + encodeURIComponent(yt.id);
+          if (yt.list) params.push("list=" + encodeURIComponent(yt.list));
+        } else if (yt && yt.list) {
+          src = "https://www.youtube.com/embed/videoseries";
+          params.push("list=" + encodeURIComponent(yt.list));
+        } else {
+          return null;
+        }
+        if (yt.start && Number.isFinite(yt.start)) params.push("start=" + yt.start);
+        if (params.length) src += "?" + params.join("&");
+        var iframe = document.createElement("iframe");
+        iframe.className = "yt";
+        iframe.width = "560";
+        iframe.height = "315";
+        iframe.src = src;
+        iframe.setAttribute("allow",
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        );
+        iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+        iframe.allowFullscreen = true;
+        return iframe;
+      }
+
+      (function () {
+        var socket = io();
+
+        document.querySelector('form').addEventListener('submit', function (e) {
+          e.preventDefault();
+          var nombreTxt = document.getElementById('nombre').value || "Anonimo";
+          var mensajeTxt = document.getElementById('m').value;
+          if (!mensajeTxt) return;
+
+          if (colorHexTxt === "") colorHexTxt = getRandomColor();
+
+          var jsonMsg = { nombre: nombreTxt, mensaje: mensajeTxt, color: colorHexTxt };
+          socket.emit('Evento-Mensaje-Server', JSON.stringify(jsonMsg));
+          document.getElementById('m').value = '';
+        });
+
+        socket.on('Evento-Mensaje-Server', function (msg) {
+          var out;
+          try { out = JSON.parse(msg); } catch (e) { return; }
+
+          var li = document.createElement('li');
+
+          var meta = document.createElement('span');
+          meta.className = 'meta';
+          meta.style.color = out.color || '#000000';
+          meta.style.fontWeight = '700';
+          meta.textContent = (out.nombre || 'Anonimo');
+          li.appendChild(meta);
+
+          if (out.type === 'image' && out.url) {
+            var img = document.createElement('img');
+            img.className = 'embedded';
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.alt = 'image';
+            img.src = out.url;
+            li.appendChild(img);
+
+            if (out.mensaje) {
+              var p = document.createElement('div');
+              p.className = 'text';
+              p.textContent = out.mensaje;
+              li.appendChild(p);
+            }
+          }
+          else if (out.type === 'video' && out.yt) {
+            var iframe = buildYouTubeEmbed(out.yt);
+            if (iframe) li.appendChild(iframe);
+
+            if (out.mensaje) {
+              var p2 = document.createElement('div');
+              p2.className = 'text';
+              p2.textContent = out.mensaje;
+              li.appendChild(p2);
+            }
+          }
+          else {
+            var p3 = document.createElement('div');
+            p3.className = 'text';
+            p3.textContent = out.mensaje || '';
+            li.appendChild(p3);
+          }
+
+          document.getElementById('messages').appendChild(li);
+          window.scrollTo(0, document.body.scrollHeight);
+        });
+      })();
+    </script>
+  </body>
+</html>

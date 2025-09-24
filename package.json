@@ -1,0 +1,14 @@
+{
+  "name": "lab5-seguridad-informatica",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "express": "*",
+    "mocha": "^10.2.0",
+    "socket.io": "*"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "mocha"
+  }
+}
