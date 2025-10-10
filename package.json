@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "express": "*",
+    "express": "4.21.2",
     "mocha": "^10.2.0",
     "socket.io": "*"
   },
